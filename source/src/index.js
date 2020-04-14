@@ -51,24 +51,26 @@ class Game extends React.Component {
         this.state = {
           size: 20, //any more than 50 will make the board misaligns.
           xNext: true, // who goes first
-          winCond: 5, // <= size of course
+          winCond: 5, // number of continuous squares to win 
           winner: null,
           stepNum: 0,
+          settingsMsg: null,
+          sortOrder: true,
         };
+        this.sizeInput= React.createRef();
+        this.winCondInput= React.createRef();
         this.state.history = [{
             squares: Array(this.state.size*this.state.size).fill(null),
-            colors: Array(this.state.size*this.state.size).fill("white")
+            colors: Array(this.state.size*this.state.size).fill("white"),
+            winner: null
         }];
         this.state.colors =  Array(this.state.size*this.state.size).fill("white");
-        // this.state.horizontal = Array(this.state.size).fill(0);
-        // this.state.vertical = Array(this.state.size).fill(0);
     }
 
     jumpTo(step){
-        console.log("ok");
         this.setState({
             stepNum: step,
-            xIsNext: (step % 2) === 0,
+            xNext: (step % 2) === 0,
           });
     }
 
@@ -76,7 +78,8 @@ class Game extends React.Component {
         this.setState({
             history: [{
                 squares: Array(this.state.size*this.state.size).fill(null),
-                colors: Array(this.state.size*this.state.size).fill("white")
+                colors: Array(this.state.size*this.state.size).fill("white"),
+                winner: null
             }],
             stepNum: 0,
             winner: null,
@@ -84,19 +87,46 @@ class Game extends React.Component {
             colors: Array(this.state.size*this.state.size).fill("white")
         })
     }
+
+    changeGameSettings(){
+        const newSize = parseInt(this.sizeInput.current.value);
+        const newWinCond = parseInt(this.winCondInput.current.value);
+        if(newSize < 1 || newWinCond > newSize || newWinCond < 1){
+            this.setState({
+               settingsMsg: 'Invalid settings'
+            })
+            return;
+        }
+
+        this.setState({
+            settingsMsg: null,
+            size: newSize,
+            winCond: newWinCond
+        })
+        this.newGame();
+    }
     
     render() {
-        const history = this.state.history;
+        let history = this.state.history;
         const current = history[this.state.stepNum];
         
         let status = 0;
-        if(this.state.winner)
-            if(this.state.winner !== 'None')
-                status = 'Winner: ' + this.state.winner;
+        if(current.winner)
+            if(current.winner !== 'None')
+                status = 'Winner: ' + current.winner;
             else status = 'Draw!'
         else status = 'Next player: ' + (this.state.xNext ? 'X' : 'O');
 
+        if(this.state.sortOrder){
+            history = history.slice().sort();
+        } else{
+            history = history.slice().sort().reverse();
+        }
+
         const moves = history.map((step, move) => {
+        if(!this.state.sortOrder){
+            move = history.length - 1 - move;
+        }
         const desc = move ?
             'Go to move #' + move :
             'Go to game start';
@@ -115,7 +145,27 @@ class Game extends React.Component {
                 <div className="game-info">
                     <div>{status}</div>
                     <div>{this.state.winner && <button onClick={()=> this.newGame()}>Start a new game</button>}</div>
+                    <div>Move List: <button onClick={()=>{this.setState({sortOrder:!this.state.sortOrder})}}>{this.state.sortOrder?'Ascending':'Descending'}</button></div>
                     <ol>{moves}</ol>
+                </div>
+                <div className="game-info" style={{width: 150}}>
+                        <div><label>
+                            Board size:<br/>
+                            Default: 20 <br/>
+                            <input defaultValue={20} type="number" ref={this.sizeInput} name="boardsize" />
+                        </label>
+                        </div>
+                        <div>
+                        <label>
+                            Winning condition:<br/>
+                            Default: 5 <br/>
+                            Max: board size <br/>
+                            <input defaultValue={5} type="number" ref={this.winCondInput} name="winningcond"></input>
+                        </label>
+                        </div>
+                        <br/>
+                        <button onClick={()=> this.changeGameSettings()}>Apply and reset</button>
+                    <div style={{color: 'red'}}>{this.state.settingsMsg}</div>
                 </div>
             </div>
         );
@@ -145,17 +195,10 @@ class Game extends React.Component {
         if(count > max)
             max = count;
 
-        if(max === winCond){
-            let newColor = this.state.colors.slice();
-            winningSquares.forEach(element => {
-                newColor[element] = "yellow";
-            });
-            this.setState((prevState) => ({
-                colors: this.updateColorArray(prevState.colors,newColor),
-              }));
-            return 1;
+        if(max >= winCond){
+            return winningSquares;
         }
-        else return 0;
+        else return null;
     }
 
     // find longest vertical sequence of current player from current move.
@@ -181,17 +224,10 @@ class Game extends React.Component {
         if(count > max)
             max = count;
 
-            if(max === winCond){
-                let newColor = this.state.colors.slice();
-                winningSquares.forEach(element => {
-                    newColor[element] = "yellow";
-                });
-                this.setState((prevState) => ({
-                    colors: this.updateColorArray(prevState.colors,newColor),
-                  }));
-                return 1;
+            if(max >= winCond){
+                return winningSquares;
             }
-            else return 0;
+            else return null;
     }
 
     // check 2 halves of the diagonal sequence of current player from current move.
@@ -224,18 +260,10 @@ class Game extends React.Component {
             i++;
         }
 
-        if(count === winCond){
-            let newColor = this.state.colors.slice();
-            winningSquares.forEach(element => {
-                newColor[vert*size + hori] = "yellow";
-                newColor[element] = "yellow";
-            });
-            this.setState((prevState) => ({
-                colors: this.updateColorArray(prevState.colors,newColor),
-              }));
-            return 1;
+        if(count >= winCond){
+            return winningSquares;
         }
-        else return 0;
+        else return null;
     }
 
     // check 2 halves of the antidiagonal sequence of current player from current move.
@@ -268,86 +296,91 @@ class Game extends React.Component {
             i++;
         }
         
-        if(count === winCond){
-            let newColor = this.state.colors.slice();
-            winningSquares.forEach(element => {
-                newColor[element] = "yellow";
-                newColor[vert*size + hori] = "yellow";
-            });
-            this.setState((prevState) => ({
-                colors: this.updateColorArray(prevState.colors,newColor),
-              }));
-            return 1;
+        if(count >= winCond){
+            return winningSquares;
         }
-        else return 0;
+        else return null;
     }
 
-    updateColorArray(oldColor,newColor){
-        newColor.forEach((element,index) => {
-            if(element === 'yellow')
-                oldColor[index] = 'yellow';            
+    updateColorArray(winningSquares){
+        let newColor = Array(this.state.size*this.state.size).fill("white");
+        winningSquares.forEach((element) => {
+            newColor[parseInt(element)] = "yellow"    
         });
 
-        return oldColor;
+        return newColor;
     }
 
     handleClick(i) {
         const history = this.state.history.slice(0,this.state.stepNum +1);
-        let vert = Math.floor(i / this.state.size);
-        let hori = i % this.state.size;
-        let player = this.state.xNext ? 'X' : 'O';
+        const vert = Math.floor(i / this.state.size);
+        const hori = i % this.state.size;
+        const player = this.state.xNext ? 'X' : 'O';
         const squares = history[history.length-1].squares.slice();
-        const colors = this.state.colors.slice();
+        const colors = history[history.length-1].colors.slice();
+        let winningSquares = [];
+
         
-        
-        //someone won or the square's already been occupied
-        if(squares[i] !== null || this.state.winner !== null) return;
-        console.log(history)
+        if(history[history.length-1].winner !== null || squares[i] !== null){
+            return;
+        }
         squares[i] = player;
+        
+        const winningCol = this.checkCol(squares,this.state.size,this.state.winCond,hori,vert,player)
+        const winningRow = this.checkRow(squares,this.state.size,this.state.winCond,hori,vert,player)
+        const winningDiag = this.checkDiag(squares,this.state.size,this.state.winCond,hori,vert,player)
+        const winningAntiDiag = this.checkAntiDiag(squares,this.state.size,this.state.winCond,hori,vert,player)
 
-        if(this.checkCol(squares,this.state.size,this.state.winCond,hori,vert,player) 
-        || this.checkRow(squares,this.state.size,this.state.winCond,hori,vert,player)
-        || this.checkDiag(squares,this.state.size,this.state.winCond,hori,vert,player)
-        || this.checkAntiDiag(squares,this.state.size,this.state.winCond,hori,vert,player)
-        ){
-            this.checkCol(squares,this.state.size,this.state.winCond,hori,vert,player); 
-            this.checkRow(squares,this.state.size,this.state.winCond,hori,vert,player);
-            this.checkDiag(squares,this.state.size,this.state.winCond,hori,vert,player);
-            this.checkAntiDiag(squares,this.state.size,this.state.winCond,hori,vert,player);
+        if(winningCol !== null){
+            winningSquares= winningSquares.concat(winningCol);
+        }
+        if(winningRow !== null){
+            winningSquares= winningSquares.concat(winningRow);
+        }
+        if(winningDiag !== null){
+            winningSquares= winningSquares.concat(winningDiag);
+            winningSquares.push(i);
+        }
+        if(winningAntiDiag !== null){
+            winningSquares= winningSquares.concat(winningAntiDiag);
+            winningSquares.push(i);
+        }
 
-            this.setState((prevState) => ({
+        if(winningSquares.length > 0){
+            this.setState({
                 history: history.concat([{
                     squares: squares,
-                    colors: prevState.colors
+                    colors: this.updateColorArray(winningSquares),
+                    winner: player,
                 }]),
                 stepNum: history.length,
-                squares: squares,
                 xNext: !this.state.xNext,
                 winner: player,
-            }));
+            });
             return;
         }
         
-        console.log(history)
         this.setState({
             history: history.concat([{
                 squares: squares,
                 colors: colors,
+                winner: null,
             }]),
             stepNum: history.length,
             xNext: !this.state.xNext,
         });
-        console.log(history)
 
         if(!squares.includes(null)){
             this.setState({
-                winner: 'None',
+                history: history.concat([{
+                    squares: squares,
+                    colors: colors,
+                    winner: 'None',
+                }]),
             })
             return;
         }
     }
-
-
 }
 
 // ========================================
