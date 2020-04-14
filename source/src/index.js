@@ -79,7 +79,9 @@ class Game extends React.Component {
             history: [{
                 squares: Array(this.state.size*this.state.size).fill(null),
                 colors: Array(this.state.size*this.state.size).fill("white"),
-                winner: null
+                winner: null,
+                hori: null,
+                vert: null,
             }],
             stepNum: 0,
             winner: null,
@@ -128,11 +130,11 @@ class Game extends React.Component {
             move = history.length - 1 - move;
         }
         const desc = move ?
-            'Go to move #' + move :
+            'Go to move #' + move + ' (' + (parseInt(step.hori)) + ',' + (parseInt(step.vert)) + ')':
             'Go to game start';
         return (
-            <li key={move}>
-            <button onClick={() => this.jumpTo(move)}>{desc}</button>
+            <li key={move} style={this.state.stepNum === move? {fontWeight: 'bold'}: {fontWeight: 'normal'}}>
+            <button style={this.state.stepNum === move? {fontWeight: 'bold'}: {fontWeight: 'normal'}} onClick={() => this.jumpTo(move)}>{desc}</button>
             </li>
         );
         });
@@ -142,7 +144,7 @@ class Game extends React.Component {
                 <div className="game-board">
                     <Board settings={this.state} history={current} onClick={(i) => this.handleClick(i)} />
                 </div>
-                <div className="game-info">
+                <div className="game-info" style={{width: 200}}>
                     <div>{status}</div>
                     <div>{this.state.winner && <button onClick={()=> this.newGame()}>Start a new game</button>}</div>
                     <div>Move List: <button onClick={()=>{this.setState({sortOrder:!this.state.sortOrder})}}>{this.state.sortOrder?'Ascending':'Descending'}</button></div>
@@ -352,6 +354,8 @@ class Game extends React.Component {
                     squares: squares,
                     colors: this.updateColorArray(winningSquares),
                     winner: player,
+                    hori: hori,
+                    vert: vert,
                 }]),
                 stepNum: history.length,
                 xNext: !this.state.xNext,
@@ -365,6 +369,8 @@ class Game extends React.Component {
                 squares: squares,
                 colors: colors,
                 winner: null,
+                hori: hori,
+                vert: vert,
             }]),
             stepNum: history.length,
             xNext: !this.state.xNext,
