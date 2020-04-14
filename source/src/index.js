@@ -33,20 +33,12 @@ class Board extends React.Component {
     }
 
     renderSquare(i) {
-        return <Square  color={this.props.settings.colors[i]} value={this.props.settings.squares[i]} onClick={() => this.props.onClick(i)}/>;
+        return <Square color={this.props.history.colors[i]} value={this.props.history.squares[i]} onClick={() => this.props.onClick(i)}/>;
     }
 
     render() {
-        let status;
-        if(this.props.settings.winner)
-            if(this.props.settings.winner !== 'None')
-                status = 'Winner: ' + this.props.settings.winner;
-            else status = 'Draw!'
-        else status = 'Next player: ' + (this.props.settings.xNext ? 'X' : 'O');
-
         return (
             <div>
-                <div className="status">{status}</div>
                 {this.renderBoard()}
             </div>
         );
@@ -61,23 +53,69 @@ class Game extends React.Component {
           xNext: true, // who goes first
           winCond: 5, // <= size of course
           winner: null,
+          stepNum: 0,
         };
-        this.state.history = [];
-        this.state.squares = Array(this.state.size*this.state.size).fill(null);
+        this.state.history = [{
+            squares: Array(this.state.size*this.state.size).fill(null),
+            colors: Array(this.state.size*this.state.size).fill("white")
+        }];
         this.state.colors =  Array(this.state.size*this.state.size).fill("white");
         // this.state.horizontal = Array(this.state.size).fill(0);
         // this.state.vertical = Array(this.state.size).fill(0);
     }
+
+    jumpTo(step){
+        console.log("ok");
+        this.setState({
+            stepNum: step,
+            xIsNext: (step % 2) === 0,
+          });
+    }
+
+    newGame(){
+        this.setState({
+            history: [{
+                squares: Array(this.state.size*this.state.size).fill(null),
+                colors: Array(this.state.size*this.state.size).fill("white")
+            }],
+            stepNum: 0,
+            winner: null,
+            xNext: true,
+            colors: Array(this.state.size*this.state.size).fill("white")
+        })
+    }
     
     render() {
+        const history = this.state.history;
+        const current = history[this.state.stepNum];
+        
+        let status = 0;
+        if(this.state.winner)
+            if(this.state.winner !== 'None')
+                status = 'Winner: ' + this.state.winner;
+            else status = 'Draw!'
+        else status = 'Next player: ' + (this.state.xNext ? 'X' : 'O');
+
+        const moves = history.map((step, move) => {
+        const desc = move ?
+            'Go to move #' + move :
+            'Go to game start';
+        return (
+            <li key={move}>
+            <button onClick={() => this.jumpTo(move)}>{desc}</button>
+            </li>
+        );
+        });
+
         return (
             <div className="game">
                 <div className="game-board">
-                    <Board settings={this.state} onClick={(i) => this.handleClick(i)} />
+                    <Board settings={this.state} history={current} onClick={(i) => this.handleClick(i)} />
                 </div>
                 <div className="game-info">
-                    <div>{/* status */}</div>
-                    <ol>{/* TODO */}</ol>
+                    <div>{status}</div>
+                    <div>{this.state.winner && <button onClick={()=> this.newGame()}>Start a new game</button>}</div>
+                    <ol>{moves}</ol>
                 </div>
             </div>
         );
@@ -254,23 +292,18 @@ class Game extends React.Component {
     }
 
     handleClick(i) {
-        const history = this.state.history
+        const history = this.state.history.slice(0,this.state.stepNum +1);
         let vert = Math.floor(i / this.state.size);
         let hori = i % this.state.size;
         let player = this.state.xNext ? 'X' : 'O';
-        const squares = this.state.squares.slice();
-
+        const squares = history[history.length-1].squares.slice();
+        const colors = this.state.colors.slice();
+        
+        
         //someone won or the square's already been occupied
         if(squares[i] !== null || this.state.winner !== null) return;
-
+        console.log(history)
         squares[i] = player;
-        this.setState({
-            history: history.concat([{
-                squares: squares
-            }]),
-            squares: squares,
-            xNext: !this.state.xNext
-        });
 
         if(this.checkCol(squares,this.state.size,this.state.winCond,hori,vert,player) 
         || this.checkRow(squares,this.state.size,this.state.winCond,hori,vert,player)
@@ -281,11 +314,30 @@ class Game extends React.Component {
             this.checkRow(squares,this.state.size,this.state.winCond,hori,vert,player);
             this.checkDiag(squares,this.state.size,this.state.winCond,hori,vert,player);
             this.checkAntiDiag(squares,this.state.size,this.state.winCond,hori,vert,player);
-            this.setState({
+
+            this.setState((prevState) => ({
+                history: history.concat([{
+                    squares: squares,
+                    colors: prevState.colors
+                }]),
+                stepNum: history.length,
+                squares: squares,
+                xNext: !this.state.xNext,
                 winner: player,
-            })
+            }));
             return;
         }
+        
+        console.log(history)
+        this.setState({
+            history: history.concat([{
+                squares: squares,
+                colors: colors,
+            }]),
+            stepNum: history.length,
+            xNext: !this.state.xNext,
+        });
+        console.log(history)
 
         if(!squares.includes(null)){
             this.setState({
