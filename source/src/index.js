@@ -178,25 +178,29 @@ class Game extends React.Component {
         let start = Math.max(0,hori-(winCond-1));
         let end = Math.min(hori+(winCond-1),size-1);
         let count = 0;
-        let winningSquares = [];
+        let winningSquares = [],curSquares = [];
         let line = vert*size;
         let max = 1;
 
         for(start;start <= end;start++){
+            debugger;
             if(squares[line + start] === player){
                 count++;
-                winningSquares.push(line + start);
+                curSquares.push(line + start);
             } else {
-                if(count >= winCond)
-                    break;
-                if(count > max)
+                if(count > max){
                     max = count;
+                    winningSquares = curSquares;
+                }
                 count = 0;
+                curSquares = [];
             }
         }
 
-        if(count > max)
+        if(count > max){
             max = count;
+            winningSquares = curSquares;
+        }
 
         if(max >= winCond){
             return winningSquares;
@@ -209,25 +213,28 @@ class Game extends React.Component {
         let start = Math.max(0,vert-(winCond-1));
         let end = Math.min(vert+(winCond-1),size-1);
         let count = 0;
-        let winningSquares = [];
+        let winningSquares = [],curSquares = [];
         let col = hori;
         let max = 1;
 
         for(start;start <= end;start++){
             if(squares[start*size + col] === player){
                 count++;
-                winningSquares.push(start*size + col);
+                curSquares.push(start*size + col);
             } else {
-                if(count >= winCond)
-                    break;
-                if(count > max)
+                if(count > max){
                     max = count;
+                    winningSquares = curSquares;
+                }
                 count = 0;
+                curSquares = [];
             }
         }
 
-        if(count > max)
+        if(count > max){
             max = count;
+            winningSquares = curSquares;
+        }
 
             if(max >= winCond){
                 return winningSquares;
