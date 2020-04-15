@@ -187,10 +187,11 @@ class Game extends React.Component {
                 count++;
                 winningSquares.push(line + start);
             } else {
+                if(count >= winCond)
+                    break;
                 if(count > max)
                     max = count;
                 count = 0;
-                
             }
         }
 
@@ -217,6 +218,8 @@ class Game extends React.Component {
                 count++;
                 winningSquares.push(start*size + col);
             } else {
+                if(count >= winCond)
+                    break;
                 if(count > max)
                     max = count;
                 count = 0;
@@ -236,27 +239,28 @@ class Game extends React.Component {
     checkDiag(squares, size, winCond, hori,vert,player){
         let count = 1;
         let i = 1,curVert = vert, curHori = hori;
+        let forward = true, backward = true;
         let winningSquares = [];
 
-        while (i < winCond){
+        while (forward || backward){
             curVert = vert + i;
             curHori = hori + i;
 
-            if(curVert >= 0 && curVert < size && curHori >= 0 && curHori < size){      
+            if(forward && curVert >= 0 && curVert < size && curHori >= 0 && curHori < size){      
                 if(squares[curVert*size + curHori] === player){
                     count++;
                     winningSquares.push(curVert*size + curHori);
-                } 
+                } else forward = false;
             }
 
             curVert = vert - i;
             curHori = hori - i;
 
-            if(curVert >= 0 && curVert < size && curHori >= 0 && curHori < size){      
+            if(backward && curVert >= 0 && curVert < size && curHori >= 0 && curHori < size){      
                 if(squares[curVert*size + curHori] === player){
                     count++;
                     winningSquares.push(curVert*size + curHori);
-                } 
+                } else backward = false;
             }
 
             i++;
@@ -272,27 +276,28 @@ class Game extends React.Component {
     checkAntiDiag(squares, size, winCond,hori,vert,player){
         let count = 1;
         let i = 1,curVert = vert, curHori = hori;
+        let forward = true, backward = true;
         let winningSquares = [];
 
         while (i < winCond){
             curVert = vert + i;
             curHori = hori - i;
 
-            if(curVert >= 0 && curVert < size && curHori >= 0 && curHori < size){      
+            if(forward && curVert >= 0 && curVert < size && curHori >= 0 && curHori < size){      
                 if(squares[curVert*size + curHori] === player){
                     count++;
                     winningSquares.push(curVert*size + curHori);
-                } 
+                } else forward = false;
             }
 
             curVert = vert - i;
             curHori = hori + i;
 
-            if(curVert >= 0 && curVert < size && curHori >= 0 && curHori < size){      
+            if(backward && curVert >= 0 && curVert < size && curHori >= 0 && curHori < size){      
                 if(squares[curVert*size + curHori] === player){
                     count++;
                     winningSquares.push(curVert*size + curHori);
-                } 
+                } else backward = false;
             }
 
             i++;
